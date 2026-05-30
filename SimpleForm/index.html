@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Program Karyawan</title>
+
+  <!-- Supabase JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+  <!-- Google Fonts: DM Sans (body) + Syne (headings) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; }
+    body {
+      height: 100%;
+      background: #080D1A;
+      font-family: 'DM Sans', sans-serif;
+      color: #E8EDF8;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+    input, textarea, select, button { font-family: inherit; }
+    a { color: #5B8EF4; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #252D47; border-radius: 4px; }
+
+    /* ── App Shell ────────────────────────────────────────────── */
+    #app {
+      width: 100%;
+      max-width: 430px;
+      min-height: 100vh;
+      background: #0C1120;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ── Screen System ────────────────────────────────────────── */
+    .screen {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      min-height: 100vh;
+      animation: fadeIn 0.25s ease;
+    }
+    .screen.active { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    @keyframes spin   { to { transform: rotate(360deg); } }
+    @keyframes pop    { 0%{transform:scale(.6);opacity:0} 70%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
+    @keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+
+    /* ── Nav Bar ──────────────────────────────────────────────── */
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      background: #0A0F1E;
+      border-bottom: 1px solid #1B2340;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .nav-bar h1 { flex: 1; text-align: center; font-size: 15px; font-weight: 600; color: #E8EDF8; }
+    .nav-btn {
+      width: 36px; height: 36px;
+      background: none; border: none;
+      color: #6A7898; cursor: pointer;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-btn:hover { background: #151E35; color: #E8EDF8; }
+
+    /* ── Bottom Nav ───────────────────────────────────────────── */
+    .bottom-nav {
+      display: flex;
+      background: #0A0F1E;
+      border-top: 1px solid #1B2340;
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+    .bottom-nav button {
+      flex: 1;
+      background: none; border: none;
+      cursor: pointer;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 4px;
+      padding: 10px 4px 8px;
+      color: #3D4E6E;
+      font-size: 10px; font-weight: 500;
+      font-family: inherit;
+      transition: color 0.15s;
+    }
+    .bottom-nav button.active { color: #5B8EF4; }
+    .bottom-nav svg { flex-shrink: 0; }
+
+    /* ── Scrollable Content ───────────────────────────────────── */
+    .scroll-body {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ── Section Header ───────────────────────────────────────── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 20px 0 14px;
+    }
+    .section-header .line {
+      width: 3px; height: 20px;
+      background: #4169E1;
+      border-radius: 2px;
+    }
+    .section-header h3 { font-size: 15px; font-weight: 700; color: #E8EDF8; font-family: 'Syne', sans-serif; }
+
+    /* ── Field ────────────────────────────────────────────────── */
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block; font-size: 13px; font-weight: 500;
+      color: #8899BB; margin-bottom: 7px;
+    }
+    .field label .req { color: #EF4444; margin-left: 3px; }
+    .field input, .field textarea, .field select {
+      width: 100%;
+      background: #111928;
+      border: 1px solid #1F2C44;
+      border-radius: 10px;
+      padding: 12px 14px;
+      color: #E8EDF8;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.18s, box-shadow 0.18s;
+      -webkit-appearance: none;
+    }
+    .field input::placeholder, .field textarea::placeholder { color: #3D4E6E; }
+    .field input:focus, .field textarea:focus, .field select:focus {
+      border-color: #4169E1;
+      box-shadow: 0 0 0 3px rgba(65,105,225,0.12);
+    }
+    .field input.err, .field textarea.err { border-color: #EF4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.1); }
+    .field textarea { resize: vertical; min-height: 96px; line-height: 1.6; }
+    .field .err-msg { font-size: 11px; color: #EF4444; margin-top: 5px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+    .field .helper  { font-size: 12px; color: #3D4E6E; margin-top: 5px; font-style: italic; line-height: 1.5; }
+
+    /* ── Vehicle Type Toggle ──────────────────────────────────── */
+    .vtype-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .vtype-btn {
+      background: #111928;
+      border: 1.5px solid #1F2C44;
+      border-radius: 12px;
+      padding: 14px 8px;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 7px;
+      cursor: pointer;
+      color: #6A7898;
+      font-size: 12px; font-weight: 600;
+      font-family: inherit;
+      transition: all 0.18s;
+    }
+    .vtype-btn.selected {
+      background: #0E1D42;
+      border-color: #4169E1;
+      color: #E8EDF8;
+      box-shadow: 0 0 0 3px rgba(65,105,225,0.15);
+    }
+    .vtype-btn:hover:not(.selected) { background: #141D31; border-color: #2A3A58; }
+
+    /* ── Merk Autocomplete ────────────────────────────────────── */
+    .autocomplete-wrap { position: relative; }
+    .autocomplete-dropdown {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: #131C30;
+      border: 1px solid #1F2C44;
+      border-radius: 10px;
+      z-index: 200;
+      max-height: 180px;
+      overflow-y: auto;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+    }
+    .autocomplete-dropdown div {
+      padding: 11px 14px;
+      font-size: 14px;
+      color: #C5D0E8;
+      border-bottom: 1px solid #1B2340;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .autocomplete-dropdown div:last-child { border-bottom: none; }
+    .autocomplete-dropdown div:hover { background: #1A2640; }
+
+    /* ── Consent ──────────────────────────────────────────────── */
+    .consent-row {
+      display: flex; gap: 10px; align-items: flex-start;
+      background: #0E1626;
+      border: 1px solid #1B2340;
+      border-radius: 10px;
+      padding: 12px 14px;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+    .consent-row input[type=checkbox] {
+      width: 16px; height: 16px;
+      margin-top: 2px; flex-shrink: 0;
+      accent-color: #4169E1;
+      cursor: pointer;
+    }
+    .consent-row span { font-size: 13px; color: #8899BB; line-height: 1.6; }
+    .consent-err { font-size: 11px; color: #EF4444; margin-top: -14px; margin-bottom: 14px; font-weight: 500; }
+
+    /* ── Primary Button ───────────────────────────────────────── */
+    .btn-primary {
+      width: 100%;
+      background: #162045;
+      color: #E8EDF8;
+      border: 1.5px solid #2A3F70;
+      border-radius: 12px;
+      padding: 15px;
+      font-size: 15px; font-weight: 700;
+      font-family: 'Syne', sans-serif;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background 0.18s, border-color 0.18s, transform 0.1s;
+      letter-spacing: 0.02em;
+    }
+    .btn-primary:hover { background: #1D2D5C; border-color: #3B5BDB; }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { background: #0E1626; color: #3D4E6E; border-color: #1B2340; cursor: not-allowed; }
+    .btn-outline {
+      width: 100%;
+      background: transparent;
+      color: #C5D0E8;
+      border: 1.5px solid #1F2C44;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 14px; font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-outline:hover { background: #111928; border-color: #2A3A58; }
+
+    /* ── Spinner ──────────────────────────────────────────────── */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+
+    /* ── Hero Banner ──────────────────────────────────────────── */
+    .hero-banner {
+      margin: 14px 16px;
+      border-radius: 14px;
+      overflow: hidden;
+      height: 128px;
+      background: linear-gradient(135deg, #0A1530 0%, #162050 50%, #0E1A40 100%);
+      position: relative;
+      display: flex;
+      align-items: center;
+      padding: 0 22px;
+      justify-content: space-between;
+    }
+    .hero-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+    .hero-text { position: relative; z-index: 1; }
+    .hero-text .eyebrow { font-size: 10px; color: rgba(255,255,255,.45); font-weight: 600; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px; }
+    .hero-text .title { font-size: 17px; font-weight: 800; color: #fff; font-family: 'Syne', sans-serif; line-height: 1.25; max-width: 190px; }
+    .hero-icon { position: relative; z-index: 1; opacity: .18; }
+
+    /* ── Toast ────────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+      background: #EF4444; color: #fff;
+      padding: 10px 18px; border-radius: 20px;
+      font-size: 13px; font-weight: 600;
+      white-space: nowrap;
+      z-index: 999;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      opacity: 0; transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    #toast.show { opacity: 1; }
+
+    /* ── SUCCESS SCREEN ───────────────────────────────────────── */
+    #screen-success {
+      background: #080D1A;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 20px;
+    }
+    .success-card {
+      background: #fff;
+      border-radius: 22px;
+      padding: 38px 28px 28px;
+      width: 100%;
+      max-width: 360px;
+      display: flex; flex-direction: column;
+      align-items: center; text-align: center;
+      gap: 12px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+    }
+    .success-check-wrap {
+      position: relative;
+      animation: pop 0.45s cubic-bezier(.34,1.56,.64,1) both;
+    }
+    .success-check {
+      width: 74px; height: 74px; border-radius: 50%;
+      background: #DCFCE7;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .sparkle { position: absolute; top: -4px; right: -10px; }
+    .success-card h2 { font-size: 22px; font-weight: 800; color: #0F172A; font-family: 'Syne', sans-serif; }
+    .success-card .subtitle { font-size: 14px; color: #64748B; line-height: 1.7; max-width: 260px; }
+    .ref-box {
+      background: #F8FAFF;
+      border: 1.5px solid #D1DCF5;
+      border-radius: 12px;
+      padding: 14px 20px;
+      width: 100%;
+    }
+    .ref-box .ref-label { font-size: 11px; color: #8895B3; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; }
+    .ref-box .ref-id { font-size: 22px; font-weight: 800; color: #1B2E5C; letter-spacing: .04em; font-family: 'Syne', sans-serif; }
+    .success-btn-primary {
+      width: 100%; padding: 14px;
+      background: #111E3C; color: #fff;
+      border: none; border-radius: 11px;
+      font-size: 14px; font-weight: 700;
+      font-family: 'Syne', sans-serif;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background 0.15s;
+    }
+    .success-btn-primary:hover { background: #1A2D57; }
+    .success-btn-outline {
+      width: 100%; padding: 13px;
+      background: transparent; color: #374151;
+      border: 1.5px solid #D1D9EA; border-radius: 11px;
+      font-size: 14px; font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .success-btn-outline:hover { background: #F8FAFF; }
+    .success-help { font-size: 12px; color: #9CA3AF; }
+
+    /* ── TRACKER SCREEN ───────────────────────────────────────── */
+    .tracker-card {
+      background: #111928;
+      border: 1px solid #1B2340;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .ref-eyebrow { font-size: 10px; color: #3D4E6E; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 4px; }
+    .ref-big { font-size: 20px; font-weight: 800; color: #E8EDF8; letter-spacing: .04em; font-family: 'Syne', sans-serif; margin-bottom: 12px; }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #0E1D3A; color: #6EA0F5;
+      border-radius: 20px; padding: 4px 10px;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: .03em;
+    }
+    .refresh-btn {
+      background: none; border: none; color: #3D4E6E;
+      font-size: 11px; font-family: inherit;
+      cursor: pointer; display: flex; align-items: center; gap: 4px;
+      padding: 4px 0;
+      transition: color 0.15s;
+    }
+    .refresh-btn:hover { color: #8899BB; }
+
+    /* Stepper */
+    .stepper { display: flex; flex-direction: column; }
+    .step-row { display: flex; gap: 12px; }
+    .step-col-left { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; width: 28px; }
+    .step-dot {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .step-dot.done  { background: #16A34A; }
+    .step-dot.active { background: #111928; border: 2px solid #4169E1; }
+    .step-dot.pending { background: #111928; border: 1.5px solid #1F2C44; }
+    .step-connector { width: 2px; flex: 1; min-height: 22px; margin: 3px 0; border-radius: 2px; }
+    .step-connector.done { background: #16A34A; }
+    .step-connector.pending { background: #1F2C44; }
+    .step-content { padding-bottom: 20px; padding-top: 3px; flex: 1; }
+    .step-content:last-child { padding-bottom: 0; }
+    .step-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 3px; }
+    .step-title { font-size: 14px; font-weight: 700; }
+    .step-title.done, .step-title.active { color: #E8EDF8; }
+    .step-title.pending { color: #3D4E6E; font-weight: 500; }
+    .step-desc { font-size: 12px; color: #3D4E6E; line-height: 1.5; }
+    .step-ts   { font-size: 11px; color: #3D4E6E; }
+    .badge-running {
+      font-size: 10px; font-weight: 700;
+      background: #0E2040; color: #60A5FA;
+      border-radius: 20px; padding: 2px 8px;
+      letter-spacing: .04em;
+    }
+
+    /* Vehicle detail dark card */
+    .vehicle-card {
+      background: #0E1D3A;
+      border: 1px solid #162545;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .vehicle-card .vc-eyebrow { font-size: 10px; color: #3D5580; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 4px; }
+    .vehicle-card .vc-title { font-size: 17px; font-weight: 800; color: #E8EDF8; font-family: 'Syne', sans-serif; margin-bottom: 14px; }
+    .vc-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 0;
+      border-top: 1px solid #162545;
+      font-size: 13px;
+    }
+    .vc-row .vc-key { color: #5B7499; }
+    .vc-row .vc-val { font-weight: 700; color: #E8EDF8; }
+    .vc-row .vc-val.orange { color: #F59E0B; }
+
+    /* ── Loading skeleton ─────────────────────────────────────── */
+    .skeleton {
+      background: linear-gradient(90deg, #111928 25%, #161F35 50%, #111928 75%);
+      background-size: 800px 100%;
+      animation: shimmer 1.4s infinite linear;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- SCREEN 1: FORM                                            -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="screen-form" class="screen active">
+    <div class="nav-bar">
+      <button class="nav-btn" aria-label="Kembali">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h1>Daftar Program Karyawan</h1>
+      <button class="nav-btn" aria-label="Bantuan">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </button>
+    </div>
+
+    <div class="scroll-body">
+      <!-- Hero -->
+      <div class="hero-banner" aria-hidden="true">
+        <div class="hero-grid"></div>
+        <div class="hero-text">
+          <p class="eyebrow">Program Karyawan</p>
+          <p class="title">Wujudkan Kendaraan Impian Anda</p>
+        </div>
+        <div class="hero-icon">
+          <svg width="68" height="68" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17H3v-5l2-5h14l2 5v5h-2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/><path d="M5 12h14"/></svg>
+        </div>
+      </div>
+
+      <div style="padding: 0 16px 32px">
+
+        <!-- Informasi Kendaraan -->
+        <div class="section-header">
+          <div class="line"></div>
+          <h3>Informasi Kendaraan</h3>
+        </div>
+
+        <!-- Tipe Kendaraan -->
+        <div class="field">
+          <label>Tipe Kendaraan<span class="req">*</span></label>
+          <div class="vtype-grid">
+            <button class="vtype-btn selected" data-type="Motor" onclick="selectType(this,'Motor')" type="button">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/><path d="M8 17h7M6 17l1.5-5H14l2 3.5M11 12l-1-5H8.5M15.5 12H18l1 3M10 7h3"/></svg>
+              Motor
+            </button>
+            <button class="vtype-btn" data-type="Mobil" onclick="selectType(this,'Mobil')" type="button">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17H3v-5l2-5h14l2 5v5h-2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/><path d="M5 12h14"/></svg>
+              Mobil
+            </button>
+            <button class="vtype-btn" data-type="Truk" onclick="selectType(this,'Truk')" type="button">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="13" height="13" rx="1"/><path d="M14 8h4l3 4.5V19h-7V8z"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="18.5" r="2"/></svg>
+              Truk
+            </button>
+          </div>
+        </div>
+
+        <!-- Merk Kendaraan -->
+        <div class="field">
+          <label for="merk">Merk Kendaraan<span class="req">*</span></label>
+          <div class="autocomplete-wrap">
+            <input id="merk" type="text" placeholder="Contoh: Toyota, Honda, Yamaha"
+              autocomplete="off"
+              oninput="onMerkInput(this)"
+              onfocus="onMerkInput(this)"
+              onblur="hideMerkDropdown()" />
+            <div id="merk-dropdown" class="autocomplete-dropdown" style="display:none"></div>
+          </div>
+          <div id="merk-err" class="err-msg" style="display:none">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12" stroke="#fff" stroke-width="2"/><line x1="12" y1="16" x2="12.01" y2="16" stroke="#fff" stroke-width="2"/></svg>
+            Merk kendaraan wajib diisi.
+          </div>
+        </div>
+
+        <!-- Informasi Karyawan -->
+        <div class="section-header">
+          <div class="line"></div>
+          <h3>Informasi Karyawan</h3>
+        </div>
+
+        <div class="field">
+          <label for="nama">Nama Lengkap<span class="req">*</span></label>
+          <input id="nama" type="text" placeholder="Masukkan nama sesuai KTP" oninput="clearErr('nama')" />
+          <div id="nama-err" class="err-msg" style="display:none"></div>
+        </div>
+
+        <div class="field">
+          <label for="nohp">No. HP<span class="req">*</span></label>
+          <input id="nohp" type="tel" placeholder="08xx-xxxx-xxxx" maxlength="15" oninput="clearErr('nohp')" />
+          <div id="nohp-err" class="err-msg" style="display:none"></div>
+        </div>
+
+        <div class="field">
+          <label for="email">Email Karyawan<span class="req">*</span></label>
+          <input id="email" type="email" placeholder="nama@perusahaan.com" oninput="clearErr('email')" />
+          <div id="email-err" class="err-msg" style="display:none"></div>
+        </div>
+
+        <div class="field">
+          <label for="nik">NIK (Sesuai KTP)<span class="req">*</span></label>
+          <input id="nik" type="text" placeholder="16 digit nomor induk kependudukan"
+            maxlength="16" inputmode="numeric"
+            oninput="this.value=this.value.replace(/\D/g,'').slice(0,16); clearErr('nik')" />
+          <div id="nik-err" class="err-msg" style="display:none"></div>
+        </div>
+
+        <div class="field">
+          <label for="alamat">Alamat Tempat Tinggal<span class="req">*</span></label>
+          <textarea id="alamat" rows="4" placeholder="Jl. Nama Jalan, No. Rumah, RT/RW, Kelurahan, Kecamatan" oninput="clearErr('alamat')"></textarea>
+          <div id="alamat-err" class="err-msg" style="display:none"></div>
+          <div class="helper">Alamat lengkap diperlukan untuk keperluan survei.</div>
+        </div>
+
+        <!-- Consent -->
+        <label class="consent-row" for="consent">
+          <input type="checkbox" id="consent" onchange="clearErr('consent')" />
+          <span>Saya menyetujui pengumpulan data ini untuk keperluan Program Karyawan sesuai kebijakan privasi perusahaan.</span>
+        </label>
+        <div id="consent-err" class="consent-err" style="display:none">Persetujuan wajib dicentang sebelum mengirim.</div>
+
+        <!-- Submit Button -->
+        <button class="btn-primary" id="submit-btn" onclick="submitForm()">
+          Kirim Pendaftaran
+        </button>
+
+      </div><!-- /padding -->
+    </div><!-- /scroll-body -->
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav" aria-label="Navigasi utama">
+      <button onclick="setTab('beranda')" id="tab-beranda">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+        Beranda
+      </button>
+      <button onclick="setTab('status')" id="tab-status" class="active">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="17" y2="13"/><line x1="7" y1="17" x2="12" y2="17"/></svg>
+        Status
+      </button>
+      <button onclick="setTab('bantuan')" id="tab-bantuan">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/><line x1="14.83" y1="9.17" x2="19.07" y2="4.93"/><line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/></svg>
+        Bantuan
+      </button>
+      <button onclick="setTab('profil')" id="tab-profil">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Profil
+      </button>
+    </nav>
+  </div><!-- /screen-form -->
+
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- SCREEN 2: SUCCESS                                         -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="screen-success" class="screen">
+    <div class="success-card">
+      <!-- Animated check -->
+      <div class="success-check-wrap">
+        <div class="success-check">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20,6 9,17 4,12"/></svg>
+        </div>
+        <div class="sparkle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L9 9H2l6 4.5L5.5 22 12 17l6.5 5L16 13.5 22 9h-7z"/></svg>
+        </div>
+      </div>
+
+      <h2>Pendaftaran Berhasil!</h2>
+      <p class="subtitle">Terima kasih, <strong id="success-name" style="color:#1E293B"></strong>. Tim HR kami akan menghubungi kamu dalam 2–3 hari kerja.</p>
+
+      <div class="ref-box">
+        <div class="ref-label">Nomor Referensi</div>
+        <div class="ref-id" id="success-ref">—</div>
+      </div>
+
+      <button class="success-btn-primary" onclick="goToTracker()">
+        Lihat Status Pendaftaran
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+      <button class="success-btn-outline" onclick="goToForm()">Kembali ke Beranda</button>
+      <p class="success-help">Butuh bantuan? <a href="#">Hubungi Support</a></p>
+    </div>
+  </div><!-- /screen-success -->
+
+
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <!-- SCREEN 3: TRACKER                                         -->
+  <!-- ══════════════════════════════════════════════════════════ -->
+  <div id="screen-tracker" class="screen">
+    <div class="nav-bar">
+      <button class="nav-btn" onclick="goBack()" aria-label="Kembali">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h1>Status Pendaftaran</h1>
+      <button class="nav-btn" aria-label="Bantuan">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </button>
+    </div>
+
+    <div class="scroll-body">
+      <div style="padding: 14px 16px 32px">
+
+        <!-- Ref Card -->
+        <div class="tracker-card">
+          <div class="ref-eyebrow">Nomor Referensi</div>
+          <div class="ref-big" id="tracker-ref">—</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
+            <span class="status-badge" id="tracker-badge">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1,4 1,10 7,10"/><path d="M3.51 15a9 9 0 1 0 .49-3.56"/></svg>
+              PENINJAUAN HR
+            </span>
+            <button class="refresh-btn" onclick="refreshTracker()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1,4 1,10 7,10"/><path d="M3.51 15a9 9 0 1 0 .49-3.56"/></svg>
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- Progress Stepper -->
+        <div class="tracker-card">
+          <p style="font-size:13px;font-weight:700;color:#E8EDF8;margin-bottom:16px">Lacak Progress</p>
+          <div class="stepper" id="stepper-body">
+            <!-- injected by JS -->
+          </div>
+        </div>
+
+        <!-- Vehicle Detail Card -->
+        <div class="vehicle-card" id="vehicle-card">
+          <div class="vc-eyebrow">Detail Kendaraan</div>
+          <div class="vc-title" id="vc-title">—</div>
+          <div class="vc-row"><span class="vc-key">Tenure</span><span class="vc-val" id="vc-tenure">60 Bulan</span></div>
+          <div class="vc-row"><span class="vc-key">Skema Pembayaran</span><span class="vc-val" id="vc-skema">Potong Gaji</span></div>
+          <div class="vc-row"><span class="vc-key">Estimasi Penyerahan</span><span class="vc-val orange" id="vc-estimasi">TBD</span></div>
+        </div>
+
+        <!-- Summary button -->
+        <button class="btn-primary" style="letter-spacing:.06em; font-size:13px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          LIHAT RINGKASAN FORMULIR
+        </button>
+
+        <p style="font-size:12px;color:#3D4E6E;text-align:center;margin-top:14px;line-height:1.7">
+          Butuh bantuan? Hubungi tim support kami melalui menu Bantuan di bawah.
+        </p>
+      </div>
+    </div>
+
+    <nav class="bottom-nav" aria-label="Navigasi utama">
+      <button onclick="setTab2('beranda')" id="tab2-beranda">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+        Beranda
+      </button>
+      <button onclick="setTab2('status')" id="tab2-status" class="active">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="17" y2="13"/><line x1="7" y1="17" x2="12" y2="17"/></svg>
+        Status
+      </button>
+      <button onclick="setTab2('bantuan')" id="tab2-bantuan">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/><line x1="14.83" y1="9.17" x2="19.07" y2="4.93"/><line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/></svg>
+        Bantuan
+      </button>
+      <button onclick="setTab2('profil')" id="tab2-profil">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Profil
+      </button>
+    </nav>
+  </div><!-- /screen-tracker -->
+
+</div><!-- /app -->
+
+<!-- Toast -->
+<div id="toast"></div>
+
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   CONFIG — replace with your actual Supabase project values
+═══════════════════════════════════════════════════════════════ */
+const SUPABASE_URL  = 'https://mxtnztiibfnfztnioito.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14dG56dGlpYmZuZnp0bmlvaXRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAxMjI4ODIsImV4cCI6MjA5NTY5ODg4Mn0.fQdyr2TN-QiYg_DHJC1zHsroCZ1LFYVskePVOmdedPU';
+
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+/* ─── State ──────────────────────────────────────────────────── */
+let selectedType  = 'Motor';
+let currentRef    = '';
+let prevScreen    = 'form';
+let currentLead   = null;
+
+const VEHICLE_BRANDS = [
+  'Toyota','Honda','Yamaha','Suzuki','Mitsubishi','Daihatsu',
+  'Nissan','Mazda','Isuzu','Kawasaki','Vespa','Bajaj','TVS',
+  'Wuling','DFSK','KTM','Royal Enfield','Lainnya',
+];
+
+const STATUS_STEPS = [
+  { id: 'diterima',           label: 'Diterima',           desc: 'Formulir telah diterima oleh sistem.' },
+  { id: 'dalam-peninjauan',   label: 'Dalam Peninjauan',   desc: 'Tim HR sedang meninjau pendaftaran kamu.' },
+  { id: 'survei-dijadwalkan', label: 'Survei Dijadwalkan', desc: 'Jadwal kunjungan/survei akan segera dikonfirmasi.' },
+  { id: 'selesai',            label: 'Selesai',             desc: 'Proses selesai dan kamu terdaftar dalam program.' },
+];
+const STATUS_ORDER = STATUS_STEPS.map(s => s.id);
+
+/* ─── Screen Routing ─────────────────────────────────────────── */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+}
+function goToForm()    { prevScreen = 'success'; showScreen('form'); }
+function goToTracker() { prevScreen = 'success'; showScreen('tracker'); }
+function goBack()      { showScreen(prevScreen === 'tracker' ? 'success' : 'success'); }
+
+/* ─── Tab Navigation ─────────────────────────────────────────── */
+function setTab(tab) {
+  ['beranda','status','bantuan','profil'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t === tab);
+  });
+}
+function setTab2(tab) {
+  ['beranda','status','bantuan','profil'].forEach(t => {
+    document.getElementById('tab2-'+t).classList.toggle('active', t === tab);
+  });
+}
+
+/* ─── Vehicle Type Toggle ────────────────────────────────────── */
+function selectType(btn, type) {
+  document.querySelectorAll('.vtype-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedType = type;
+}
+
+/* ─── Merk Autocomplete ──────────────────────────────────────── */
+function onMerkInput(input) {
+  const q   = input.value.trim().toLowerCase();
+  const dd  = document.getElementById('merk-dropdown');
+  const err = document.getElementById('merk-err');
+  err.style.display = 'none';
+  document.getElementById('merk').classList.remove('err');
+
+  const matches = q
+    ? VEHICLE_BRANDS.filter(b => b.toLowerCase().includes(q))
+    : VEHICLE_BRANDS;
+
+  if (matches.length === 0) { dd.style.display = 'none'; return; }
+
+  dd.innerHTML = matches.map(b =>
+    `<div onmousedown="pickMerk('${b}')">${b}</div>`
+  ).join('');
+  dd.style.display = 'block';
+}
+function pickMerk(brand) {
+  document.getElementById('merk').value = brand;
+  document.getElementById('merk-dropdown').style.display = 'none';
+}
+function hideMerkDropdown() {
+  setTimeout(() => {
+    document.getElementById('merk-dropdown').style.display = 'none';
+  }, 160);
+}
+
+/* ─── Validation Helpers ─────────────────────────────────────── */
+function showErr(fieldId, msg) {
+  const el = document.getElementById(fieldId + '-err');
+  if (!el) return;
+  el.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="#EF4444"><circle cx="12" cy="12" r="10"/></svg> ${msg}`;
+  el.style.display = 'flex';
+  const input = document.getElementById(fieldId);
+  if (input) input.classList.add('err');
+}
+function clearErr(fieldId) {
+  const el = document.getElementById(fieldId + '-err');
+  if (el) el.style.display = 'none';
+  const input = document.getElementById(fieldId);
+  if (input) input.classList.remove('err');
+}
+
+function validate() {
+  let ok = true;
+  const merk  = document.getElementById('merk').value.trim();
+  const nama  = document.getElementById('nama').value.trim();
+  const nohp  = document.getElementById('nohp').value.replace(/[-\s]/g,'');
+  const email = document.getElementById('email').value.trim();
+  const nik   = document.getElementById('nik').value.trim();
+  const alamat= document.getElementById('alamat').value.trim();
+  const consent = document.getElementById('consent').checked;
+
+  if (!merk) { showErr('merk','Merk kendaraan wajib diisi.'); ok=false; }
+  if (nama.length < 3) { showErr('nama','Nama minimal 3 karakter.'); ok=false; }
+  if (!/^08\d{8,11}$/.test(nohp)) { showErr('nohp','Format: 08xx-xxxx-xxxx (10–13 digit).'); ok=false; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showErr('email','Format email tidak valid.'); ok=false; }
+  if (!/^\d{16}$/.test(nik)) { showErr('nik','NIK harus tepat 16 digit angka.'); ok=false; }
+  if (alamat.length < 20) { showErr('alamat','Alamat minimal 20 karakter (sertakan RT/RW, Kelurahan).'); ok=false; }
+  if (!consent) {
+    document.getElementById('consent-err').style.display = 'block';
+    ok = false;
+  } else {
+    document.getElementById('consent-err').style.display = 'none';
+  }
+  return ok;
+}
+
+/* ─── Toast ──────────────────────────────────────────────────── */
+function showToast(msg, color = '#EF4444') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = color;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+/* ─── Generate Ref ID ────────────────────────────────────────── */
+async function generateRefId() {
+  const year = new Date().getFullYear();
+  for (let i = 0; i < 10; i++) {
+    const seq = String(Math.floor(Math.random() * 99999)).padStart(5,'0');
+    const id  = `EMP-${year}-${seq}`;
+    const { data } = await _supabase.from('leads').select('id').eq('id', id).single();
+    if (!data) return id;
+  }
+  return `EMP-${year}-${Date.now()}`;
+}
+
+/* ─── Submit Form ────────────────────────────────────────────── */
+async function submitForm() {
+  if (!validate()) {
+    // Scroll to first error
+    const firstErr = document.querySelector('.err-msg[style*="flex"], .consent-err[style*="block"]');
+    if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Mengirim...';
+
+  try {
+    const nama   = document.getElementById('nama').value.trim();
+    const nohp   = document.getElementById('nohp').value.trim();
+    const email  = document.getElementById('email').value.trim().toLowerCase();
+    const nik    = document.getElementById('nik').value.trim();
+    const alamat = document.getElementById('alamat').value.trim();
+    const merk   = document.getElementById('merk').value.trim();
+
+    // Check duplicate NIK
+    const { data: existing } = await _supabase
+      .from('leads').select('id').eq('nik', nik).single();
+    if (existing) {
+      showToast('NIK ini sudah terdaftar. Hubungi HR untuk info lebih lanjut.');
+      btn.disabled = false;
+      btn.textContent = 'Kirim Pendaftaran';
+      return;
+    }
+
+    const refId = await generateRefId();
+
+    const { error } = await _supabase.from('leads').insert({
+      id:               refId,
+      tipe_kendaraan:   selectedType,
+      merk_kendaraan:   merk,
+      nama,
+      no_hp:            nohp,
+      email,
+      nik,
+      alamat,
+      status:           'dalam-peninjauan',
+      tenure:           '60 Bulan',
+      skema_pembayaran: 'Potong Gaji',
+      estimasi_penyerahan: 'TBD',
+    });
+
+    if (error) {
+      if (error.code === '23505') {
+        showToast('NIK ini sudah terdaftar.');
+      } else {
+        showToast('Gagal mengirim: ' + error.message);
+      }
+      return;
+    }
+
+    // Store for tracker
+    currentRef  = refId;
+    currentLead = { id: refId, nama, tipe_kendaraan: selectedType, merk_kendaraan: merk,
+                    status: 'dalam-peninjauan', tenure: '60 Bulan',
+                    skema_pembayaran: 'Potong Gaji', estimasi_penyerahan: 'TBD' };
+
+    // Success screen
+    document.getElementById('success-ref').textContent  = refId;
+    document.getElementById('success-name').textContent = nama;
+    prevScreen = 'form';
+    showScreen('success');
+
+  } catch (err) {
+    showToast('Tidak dapat terhubung. Coba lagi.');
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Kirim Pendaftaran';
+  }
+}
+
+/* ─── Tracker ────────────────────────────────────────────────── */
+function renderTracker(lead, history) {
+  document.getElementById('tracker-ref').textContent = lead.id;
+
+  // Status badge label
+  const currentIdx = STATUS_ORDER.indexOf(lead.status);
+  const stepLabel  = STATUS_STEPS[currentIdx]?.label || lead.status;
+  document.getElementById('tracker-badge').innerHTML = `
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1,4 1,10 7,10"/><path d="M3.51 15a9 9 0 1 0 .49-3.56"/></svg>
+    ${stepLabel.toUpperCase()}
+  `;
+
+  // Build history map: status → timestamp
+  const histMap = {};
+  (history || []).forEach(h => { histMap[h.status] = h.changed_at; });
+
+  // Stepper
+  const stepper = document.getElementById('stepper-body');
+  stepper.innerHTML = STATUS_STEPS.map((step, i) => {
+    const stepIdx = STATUS_ORDER.indexOf(step.id);
+    const isLast  = i === STATUS_STEPS.length - 1;
+    let state = 'pending';
+    if (stepIdx < currentIdx) state = 'done';
+    else if (stepIdx === currentIdx) state = 'active';
+
+    const dotContent = state === 'done'
+      ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20,6 9,17 4,12"/></svg>`
+      : state === 'active'
+      ? `<div style="width:10px;height:10px;border-radius:50%;background:#4169E1"></div>`
+      : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3D4E6E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20,6 9,17 4,12"/></svg>`;
+
+    const ts = histMap[step.id]
+      ? `<div class="step-ts">${formatDateId(histMap[step.id])}</div>` : '';
+
+    const badge = state === 'active'
+      ? `<span class="badge-running">SEDANG BERJALAN</span>` : '';
+
+    return `
+      <div class="step-row">
+        <div class="step-col-left">
+          <div class="step-dot ${state}">${dotContent}</div>
+          ${!isLast ? `<div class="step-connector ${state === 'done' ? 'done' : 'pending'}"></div>` : ''}
+        </div>
+        <div class="step-content">
+          <div class="step-title-row">
+            <span class="step-title ${state}">${step.label}</span>
+            ${badge}
+            ${ts}
+          </div>
+          <div class="step-desc">${step.desc}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Vehicle card
+  document.getElementById('vc-title').textContent    = `${lead.merk_kendaraan} (${lead.tipe_kendaraan})`;
+  document.getElementById('vc-tenure').textContent   = lead.tenure || '60 Bulan';
+  document.getElementById('vc-skema').textContent    = lead.skema_pembayaran || 'Potong Gaji';
+  document.getElementById('vc-estimasi').textContent = lead.estimasi_penyerahan || 'TBD';
+}
+
+async function refreshTracker() {
+  if (!currentRef) return;
+  try {
+    const [{ data: lead }, { data: history }] = await Promise.all([
+      _supabase.from('leads').select('*').eq('id', currentRef).single(),
+      _supabase.from('status_history').select('*').eq('lead_id', currentRef).order('changed_at'),
+    ]);
+    if (lead) { currentLead = lead; renderTracker(lead, history); }
+    showToast('Status diperbarui.', '#16A34A');
+  } catch (err) {
+    showToast('Gagal memuat status.');
+  }
+}
+
+function goToTracker() {
+  prevScreen = 'success';
+  showScreen('tracker');
+  if (currentLead) {
+    // Render immediately from cache, then refresh from DB
+    renderTracker(currentLead, []);
+    refreshTracker();
+  }
+}
+
+/* ─── Date formatter ─────────────────────────────────────────── */
+function formatDateId(iso) {
+  return new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    day: 'numeric', month: 'long', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(new Date(iso)) + ' WIB';
+}
+</script>
+</body>
+</html>
