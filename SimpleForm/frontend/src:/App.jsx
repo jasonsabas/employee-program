@@ -31,7 +31,8 @@ const C = {
   sectionLine:  '#3B5BDB',
 };
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+// const API_BASE = import.meta.env.VITE_API_URL || '/api';
+import { supabase } from './supabase';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SVG Icons
@@ -343,18 +344,100 @@ const FormScreen = ({ onSubmit, isSubmitting }) => {
     return e;
   };
 
-  const handleSubmit = () => {
-    const e = validate();
-    if (Object.keys(e).length > 0) {
-      setErrors(e);
-      // Scroll to first error
-      setTimeout(() => {
-        const el = document.querySelector('[data-error="true"]');
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 50);
-      return;
+  // const handleSubmit = () => {
+  //   const e = validate();
+  //   if (Object.keys(e).length > 0) {
+  //     setErrors(e);
+  //     // Scroll to first error
+  //     setTimeout(() => {
+  //       const el = document.querySelector('[data-error="true"]');
+  //       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  //     }, 50);
+  //     return;
+  //   }
+  //   onSubmit({ tipeKendaraan: vehicleType, merkKendaraan, nama, noHP, email, nik, alamat });
+  // };
+  const handleSubmit = async (formData) => {
+    setIsSubmitting(true);
+
+    try {
+      const refId = `EMP-${new Date().getFullYear()}-${Math.floor(
+        10000 + Math.random() * 90000
+      )}`;
+
+      const submittedAt = new Date().toISOString();
+
+      // Check duplicate NIK
+      const { data: existing } = await supabase
+        .from('leads')
+        .select('nik')
+        .eq('nik', formData.nik)
+        .maybeSingle();
+
+      if (existing) {
+        alert('NIK ini sudah terdaftar.');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('leads')
+        .insert([
+          {
+            id: refId,
+            submitted_at: submittedAt,
+            status: 'dalam-peninjauan',
+            nama: formData.nama,
+            email: formData.email,
+            no_hp: formData.noHP,
+            nik: formData.nik,
+            alamat: formData.alamat,
+            tipe_kendaraan: formData.tipeKendaraan,
+            merk_kendaraan: formData.merkKendaraan,
+          },
+        ]);
+
+      if (error) {
+        console.error(error);
+        alert(error.message);
+        return;
+      }
+
+      setSubmissionRef(refId);
+      setSubmittedName(formData.nama);
+      setSubmittedEmail(formData.email);
+
+      setLead({
+        id: refId,
+        status: 'dalam-peninjauan',
+        submittedAt,
+        vehicle: {
+          type: formData.tipeKendaraan,
+          brand: formData.merkKendaraan,
+        },
+        statusHistory: [
+          {
+            status: 'diterima',
+            timestamp: submittedAt,
+          },
+          {
+            status: 'dalam-peninjauan',
+            timestamp: submittedAt,
+          },
+        ],
+        programDetails: {
+          tenure: '60 Bulan',
+          skemaPembayaran: 'Potong Gaji',
+          estimasiPenyerahan: 'TBD',
+        },
+      });
+
+      setScreen('success');
+    } catch (err) {
+      console.error(err);
+      alert('Gagal menyimpan data.');
+    } finally {
+      setIsSubmitting(false);
     }
-    onSubmit({ tipeKendaraan: vehicleType, merkKendaraan, nama, noHP, email, nik, alamat });
   };
 
   const clearError = useCallback((field) => {
@@ -914,55 +997,182 @@ export default function App() {
   const [submittedEmail, setSubmittedEmail] = useState('');
   const [lead, setLead] = useState(null);
 
+  // const handleSubmit = async (formData) => {
+  //   setIsSubmitting(true);
+  //   try {
+  //     const res = await fetch(`${API_BASE}/leads`, {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify(formData),
+  //     });
+  //     const data = await res.json();
+
+  //     if (!res.ok) {
+  //       const msg = data.error || Object.values(data.errors || {}).join('\n') || 'Gagal mengirim pendaftaran.';
+  //       alert(msg);
+  //       return;
+  //     }
+
+  //     setSubmissionRef(data.data.id);
+  //     setSubmittedName(formData.nama);
+  //     setSubmittedEmail(formData.email);
+
+  //     // Also store lead shape locally so tracker works immediately
+  //     setLead({
+  //       id: data.data.id,
+  //       status: data.data.status,
+  //       submittedAt: data.data.submittedAt,
+  //       vehicle: { type: formData.tipeKendaraan, brand: formData.merkKendaraan },
+  //       statusHistory: [
+  //         { status: 'diterima', timestamp: data.data.submittedAt },
+  //         { status: 'dalam-peninjauan', timestamp: data.data.submittedAt },
+  //       ],
+  //       programDetails: { tenure: '60 Bulan', skemaPembayaran: 'Potong Gaji', estimasiPenyerahan: 'TBD' },
+  //     });
+
+  //     setScreen('success');
+  //   } catch {
+  //     alert('Tidak dapat terhubung ke server. Pastikan backend sudah berjalan.');
+  //   } finally {
+  //     setIsSubmitting(false);
+  //   }
+  // };
+
   const handleSubmit = async (formData) => {
     setIsSubmitting(true);
-    try {
-      const res = await fetch(`${API_BASE}/leads`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-      const data = await res.json();
 
-      if (!res.ok) {
-        const msg = data.error || Object.values(data.errors || {}).join('\n') || 'Gagal mengirim pendaftaran.';
-        alert(msg);
+    try {
+      const refId = `EMP-${new Date().getFullYear()}-${Math.floor(
+        10000 + Math.random() * 90000
+      )}`;
+
+      const submittedAt = new Date().toISOString();
+
+      // Check duplicate NIK
+      const { data: existingNik } = await supabase
+        .from('leads')
+        .select('nik')
+        .eq('nik', formData.nik)
+        .maybeSingle();
+
+      if (existingNik) {
+        alert('NIK ini sudah terdaftar.');
         return;
       }
 
-      setSubmissionRef(data.data.id);
+      const { error } = await supabase
+        .from('leads')
+        .insert([
+          {
+            id: refId,
+            submitted_at: submittedAt,
+            status: 'dalam-peninjauan',
+            nama: formData.nama,
+            email: formData.email,
+            no_hp: formData.noHP,
+            nik: formData.nik,
+            alamat: formData.alamat,
+            tipe_kendaraan: formData.tipeKendaraan,
+            merk_kendaraan: formData.merkKendaraan,
+          },
+        ]);
+
+      if (error) {
+        console.error(error);
+        alert(error.message);
+        return;
+      }
+
+      setSubmissionRef(refId);
       setSubmittedName(formData.nama);
       setSubmittedEmail(formData.email);
 
-      // Also store lead shape locally so tracker works immediately
       setLead({
-        id: data.data.id,
-        status: data.data.status,
-        submittedAt: data.data.submittedAt,
-        vehicle: { type: formData.tipeKendaraan, brand: formData.merkKendaraan },
+        id: refId,
+        status: 'dalam-peninjauan',
+        submittedAt,
+        vehicle: {
+          type: formData.tipeKendaraan,
+          brand: formData.merkKendaraan,
+        },
         statusHistory: [
-          { status: 'diterima', timestamp: data.data.submittedAt },
-          { status: 'dalam-peninjauan', timestamp: data.data.submittedAt },
+          {
+            status: 'diterima',
+            timestamp: submittedAt,
+          },
+          {
+            status: 'dalam-peninjauan',
+            timestamp: submittedAt,
+          },
         ],
-        programDetails: { tenure: '60 Bulan', skemaPembayaran: 'Potong Gaji', estimasiPenyerahan: 'TBD' },
+        programDetails: {
+          tenure: '60 Bulan',
+          skemaPembayaran: 'Potong Gaji',
+          estimasiPenyerahan: 'TBD',
+        },
       });
 
       setScreen('success');
-    } catch {
-      alert('Tidak dapat terhubung ke server. Pastikan backend sudah berjalan.');
+    } catch (err) {
+      console.error(err);
+      alert('Gagal menyimpan data.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // const handleRefresh = async () => {
+  //   if (!submissionRef) return;
+  //   try {
+  //     const res = await fetch(`${API_BASE}/leads/${submissionRef}`);
+  //     const data = await res.json();
+  //     if (data.success) setLead(data.data);
+  //   } catch {
+  //     /* silent */
+  //   }
+  // };
+
   const handleRefresh = async () => {
     if (!submissionRef) return;
+
     try {
-      const res = await fetch(`${API_BASE}/leads/${submissionRef}`);
-      const data = await res.json();
-      if (data.success) setLead(data.data);
-    } catch {
-      /* silent */
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('id', submissionRef)
+        .single();
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      setLead({
+        id: data.id,
+        status: data.status,
+        submittedAt: data.submitted_at,
+        vehicle: {
+          type: data.tipe_kendaraan,
+          brand: data.merk_kendaraan,
+        },
+        statusHistory: [
+          {
+            status: 'diterima',
+            timestamp: data.submitted_at,
+          },
+          {
+            status: data.status,
+            timestamp: data.submitted_at,
+          },
+        ],
+        programDetails: {
+          tenure: '60 Bulan',
+          skemaPembayaran: 'Potong Gaji',
+          estimasiPenyerahan: 'TBD',
+        },
+      });
+    } catch (err) {
+      console.error(err);
     }
   };
 
